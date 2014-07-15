@@ -6,7 +6,7 @@ from cv2 import *
 import time
 
 # init camera
-cam = VideoCapture(1)   # 0 -> index of camera
+cam = VideoCapture(0)   # 0 -> index of camera
 
 # create a reader
 scanner = zbar.ImageScanner()

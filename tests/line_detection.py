@@ -13,11 +13,9 @@ def continuous_capture(size_ratio = 1):
 			cam.release()
 			break
 
-def take_picture(filename):
-	cam = cv2.VideoCapture(0)
+def take_picture(cam, filename):
 	_, img = cam.read()
-	cv2.imwrite(filename + '.',img)
-	cam.release()
+	cv2.imwrite(filename,img)
 
 def read_picture(filename):
 	img = cv2.imread(filename)
@@ -68,5 +66,12 @@ def edge_detection(size_ratio=1):
 # #     cv2.line(img,(x1,y1),(x2,y2),(0,255,0),2)
 # # cv2.imshow('houghlines',img)
 
-edge_detection(0.3)
-thresholding(0.3)
+# edge_detection(0.3)
+# thresholding(0.3)
+
+if __name__ == '__main__':
+	cam = cv2.VideoCapture(0)
+	while True:
+		time.sleep(.2)
+		take_picture(cam, "%s.png" % (str(time.time()),))
+	cam.release()
