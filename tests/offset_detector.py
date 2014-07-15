@@ -10,6 +10,12 @@ def show_img(img, size_ratio = 1):
     cv2.destroyAllWindows()
     sys.exit(0)
 
+BW_THRESHOLD = 90
+LINE_THICKNESS_THRESHOLD = 30
+
+def subfinder(mylist, pattern):
+  return mylist.tostring().index(pattern.tostring())
+
 def basic_detect(file):
   img = cv2.imread(file)
 
@@ -22,10 +28,19 @@ def basic_detect(file):
   img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) # convert to grayscale
 
   # Susceptible to glare, solve w/ masking tape?
-  success, img = cv2.threshold(img, 90, 255, cv2.THRESH_BINARY)
+  success, img = cv2.threshold(img, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
   if not success:
     print "You so sensitive: %s" % (file,)
     return
+
+  line_pattern = numpy.array([numpy.uint8(0)] * LINE_THICKNESS_THRESHOLD)
+
+  try:
+    top_row = subfinder(img[0], line_pattern)
+    bottom_row = subfinder(img[-1], line_pattern)
+    print top_row - bottom_row
+  except:
+    pass
 
   show_img(img)
 
