@@ -7,8 +7,6 @@ import zbar
 from PIL import Image
 
 BW_THRESHOLD = 90
-LINE_THICKNESS_THRESHOLD = 30
-LINE_PATTERN = numpy.array([numpy.uint8(0)] * LINE_THICKNESS_THRESHOLD).tostring()
 FAILED_READS_THRESHOLD = 30
 
 def find_subarray(mylist):
@@ -48,15 +46,18 @@ def get_line_offset(current_frame):
   current_frame = current_frame[height/4:-height/4, width/4:-width/4]
 
   # Threshold the picture
-  current_frame = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY) # convert to grayscale
-
   # Susceptible to glare, solve w/ masking tape?
+  current_frame = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY) # convert to grayscale
   success, current_frame = cv2.threshold(current_frame, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
   if not success:
     print "Could not threshold frame, skipping"
     return None
 
-  return find_subarray(current_frame[len(current_frame) / 2])
+  middle_offset = find_subarray(current_frame[len(current_frame) / 2])
+  if middle_offset is None:
+    return None
+
+  return middle_offset
 
 STOP = (0, 0) # Speed first, then heading
 def compute_speed_and_heading(current_frame, scanner):
@@ -67,16 +68,13 @@ def compute_speed_and_heading(current_frame, scanner):
   line_offset = get_line_offset(current_frame)
   if line_offset is None:
     return None
-
-  location, length = line_offset
-  midpoint = (location + length) / 2
-  return (2, len(current_frame[0]) / 2 - midpoint)
+  return (2, line_offset)
 
 def communicate_to_actuation(speed_heading):
   print speed_heading
 
 if __name__ == '__main__':
-  camera = cv2.VideoCapture(1)
+  camera = cv2.VideoCapture(0)
   scanner = zbar.ImageScanner()
   scanner.parse_config('enable')
   try:
@@ -88,7 +86,7 @@ if __name__ == '__main__':
         break
 
       success, current_frame = camera.read()
-      cv2.imshow("Wutup", current_frame)
+      cv2.imshow("Wutup", cv2.resize(current_frame, (0,0), fx=0.5, fy=0.5))
       cv2.waitKey(10)
       if success:
         speed_heading = compute_speed_and_heading(current_frame, scanner)
