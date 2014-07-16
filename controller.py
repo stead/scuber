@@ -1,51 +1,105 @@
 import cv2
+import itertools
+import numpy
+import time
+import zbar
 
-def get_next_direction():
-  return 'STRAIGHT' # Can be one of STRAIGHT, STOP, LEFT, RIGHT
+from PIL import Image
 
-THRESHOLD=150
-def filter_pixel(pixel):
-  for rgb_component in pixel:
-    if rgb_component >= THRESHOLD:
-      return 0
-  return 1
+BW_THRESHOLD = 90
+LINE_THICKNESS_THRESHOLD = 30
+LINE_PATTERN = numpy.array([numpy.uint8(0)] * LINE_THICKNESS_THRESHOLD).tostring()
+FAILED_READS_THRESHOLD = 30
 
-NUM_ROWS=20
+def find_subarray(mylist):
+  # Group the list and look for the longest run of zeros.
+  longest_array_of_zeros = max(sum(1 for _ in l if n == 0) for n, l in itertools.groupby(mylist))
+  if longest_array_of_zeros > 0:
+    line_pattern = numpy.array([numpy.uint8(0)] * longest_array_of_zeros).tostring()
+    return (mylist.tostring().index(line_pattern), longest_array_of_zeros)
+  else:
+    return None
+
+def get_next_direction(current_frame, scanner):
+  cv2.imwrite('/tmp/tempFrame.png', current_frame)
+  pil_image = Image.open('/tmp/tempFrame.png').convert('L')
+
+  width, height = pil_image.size
+  raw = pil_image.tostring()
+
+  # wrap image data
+  image = zbar.Image(width, height, 'Y800', raw)
+
+  # scan the image for barcodes
+  scanResult = scanner.scan(image)
+
+  if scanResult:
+    # TODO: Still have to configure specific QR codes and check that we only stop
+    # when we see the correct one
+    return 'STOP'
+
+  # if QR code found, and QR code text is the desired destination, return stop
+  return 'STRAIGHT' # Can be one of STRAIGHT, STOP, LEFT, RIGHT. Right now only STRAIGHT or STOP.
+
 def get_line_offset(current_frame):
-  # Take middle half and run filter over it
-  width_of_frame = len(current_frame)
-  height_of_frame = len(current_frame[0])
+  # Crop the picture
+  height = len(current_frame)
+  width = len(current_frame[0])
+  current_frame = current_frame[height/4:-height/4, width/4:-width/4]
 
-  half_frame = []
-  for row in xrange(width_of_frame/4, width_of_frame*3/4):
-    row_for_half_frame = []
-    for col in xrange(height_of_frame/4, height_of_frame*3/4):
-      row_for_half_frame.append(filter_pixel(current_frame[row][col]))
-    half_frame.append(row_for_half_frame)
+  # Threshold the picture
+  current_frame = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY) # convert to grayscale
 
-  # Average middle 20(?) rows, find line
-  # TODO: Other stuff to convet ti inches
+  # Susceptible to glare, solve w/ masking tape?
+  success, current_frame = cv2.threshold(current_frame, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
+  if not success:
+    print "Could not threshold frame, skipping"
+    return None
 
-def get_speed_and_heading(current_frame):
-  next_direction = get_next_direction()
-  line_offset = get_line_offset(current_frame)
+  return find_subarray(current_frame[len(current_frame) / 2])
+
+STOP = (0, 0) # Speed first, then heading
+def compute_speed_and_heading(current_frame, scanner):
+  next_direction = get_next_direction(current_frame, scanner)
   if next_direction == 'STOP':
-    return (0, 0) # Speed first, then heading
-  else: # Go straight
-    return (2, 0)
+    return STOP
+
+  line_offset = get_line_offset(current_frame)
+  if line_offset is None:
+    return None
+
+  location, length = line_offset
+  midpoint = (location + length) / 2
+  return (2, len(current_frame[0]) / 2 - midpoint)
 
 def communicate_to_actuation(speed_heading):
   print speed_heading
 
 if __name__ == '__main__':
   camera = cv2.VideoCapture(0)
+  scanner = zbar.ImageScanner()
+  scanner.parse_config('enable')
   try:
+    num_failed_reads = 0
     while True:
+      if num_failed_reads == FAILED_READS_THRESHOLD:
+        print "Missed %d frames, stopping scooter" % (FAILED_READS_THRESHOLD,)
+        communicate_to_actuation(STOP)
+        break
+
       success, current_frame = camera.read()
       if success:
-        speed_heading = get_speed_and_heading(current_frame)
-        communicate_to_actuation(speed_heading)
+        speed_heading = compute_speed_and_heading(current_frame, scanner)
+        if speed_heading is not None:
+          num_failed_reads = 0
+          communicate_to_actuation(speed_heading)
+          if speed_heading[0] == 0:
+            break
+        else:
+          print "Couldn't compute speed and heading, passing"
+          num_failed_reads += 1
       else:
-        pass
+        print "Couldn't read frame successfully, passing"
+        num_failed_reads += 1
   finally:
     camera.release()
