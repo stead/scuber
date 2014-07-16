@@ -40,36 +40,35 @@ def get_next_direction(current_frame, scanner):
   return 'STRAIGHT' # Can be one of STRAIGHT, STOP, LEFT, RIGHT. Right now only STRAIGHT or STOP.
 
 def get_line_offset(im):
-  # Crop the picture
+  ### Crop the picture
   height = len(im)
   width = len(im[0])
   im = im[height/4:-height/4, width/4:-width/4]
 
-  # thresholding. susceptible to glare, solve with masking tape?
+  ### thresholding. susceptible to glare, solve with masking tape?
   thresh = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
   success, thresh = cv2.threshold(thresh, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
   if not success:
     print "Could not threshold frame, skipping."
     return None
 
-  # edge detection. constants here are magic
+  ### edge detection. constants here are magic
   canny = cv2.Canny(thresh, 180, 220, apertureSize = 3)
 
-  # contour detection
+  ### contour detection
   contours, _ = cv2.findContours(canny,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
   sorted_contours = sorted(contours, key=lambda x:cv2.arcLength(x,False), reverse=True)
-  cv2.drawContours(im,sorted_contours[0:1],-1,(0,255,0),3) # draw longest contour
+  # cv2.drawContours(im,sorted_contours[0:1],-1,(0,255,0),3) # draw longest contour
 
-  # get points for a single contour
+  ### Find x coordinates of endpoints
+  # get points for the single, longest contour
   cnt = sorted_contours[0]
   mask = numpy.zeros(im.shape,numpy.uint8)
   cv2.drawContours(mask,[cnt],0,255,-1)
   pixelpoints = numpy.transpose(numpy.nonzero(mask)) 
-
-  # Find x coordinates of endpoints
   xTop = pixelpoints[0][1] # IMPORTANT: pixelpoints is returned in row, column format
   xBottom = pixelpoints[-1][1]
-  print xTop,xBottom
+  return xTop - xBottom #TODO: Add center offset
 
 STOP = (0, 0) # Speed first, then heading
 def compute_speed_and_heading(current_frame, scanner):
