@@ -62,13 +62,17 @@ def get_line_offset(im):
 
   ### Find x coordinates of endpoints
   # get points for the single, longest contour
+  if len(sorted_contours) == 0:
+    print "No contours found, skipping"
+    return
+
   cnt = sorted_contours[0]
   mask = numpy.zeros(im.shape,numpy.uint8)
   cv2.drawContours(mask,[cnt],0,255,-1)
   pixelpoints = numpy.transpose(numpy.nonzero(mask)) 
   xTop = pixelpoints[0][1] # IMPORTANT: pixelpoints is returned in row, column format
   xBottom = pixelpoints[-1][1]
-  return xTop - xBottom #TODO: Add center offset
+  return xTop - xBottom + xTop - len(im[0])/2
 
 STOP = (0, 0) # Speed first, then heading
 def compute_speed_and_heading(current_frame, scanner):
