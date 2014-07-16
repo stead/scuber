@@ -76,7 +76,7 @@ def communicate_to_actuation(speed_heading):
   print speed_heading
 
 if __name__ == '__main__':
-  camera = cv2.VideoCapture(0)
+  camera = cv2.VideoCapture(1)
   scanner = zbar.ImageScanner()
   scanner.parse_config('enable')
   try:
@@ -88,6 +88,8 @@ if __name__ == '__main__':
         break
 
       success, current_frame = camera.read()
+      cv2.imshow("Wutup", current_frame)
+      cv2.waitKey(10)
       if success:
         speed_heading = compute_speed_and_heading(current_frame, scanner)
         if speed_heading is not None:
