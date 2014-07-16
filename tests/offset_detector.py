@@ -52,27 +52,36 @@ def contour_detect(file):
   width = len(im[0])
   im = im[height/4:-height/4, width/4:-width/4]
 
-  imgray = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
-  ret,thresh = cv2.threshold(imgray,90,255,0)
+  # color filter (look for black)
+  # imhsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
+  # lower_black = numpy.array([0,0,0])
+  # upper_black = numpy.array([110,110,110])  # define range of blue color in HSV  
+  # mask = cv2.inRange(imhsv, lower_black, upper_black) # Threshold the HSV image to get only black colors
 
-  contours, hierarchy = cv2.findContours(thresh,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
+  # show_img(mask, 1)
 
-  return contours
+  # edge detection
+  canny = cv2.Canny(im,180,220,apertureSize = 3)
 
-  #for contour in contours:
-  #  for item in contour:
-  #    point = item[0]
+  # contour detection
+  contours, _ = cv2.findContours(canny,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)
+  sorted_contours = sorted(contours, key=lambda x:len(x), reverse=True)
+  cv2.drawContours(im,sorted_contours[0:3],-1,(0,255,0),3)
+
+  cnt = sorted_contours[0]
+  cv2.drawContours(im,[cnt],0,(0,255,0),3)
+
+  show_img(im, 1)
 
 
-  #print contours[0]
-
+  #contours, hierarchy = cv2.findContours(thresh,cv2.RETR_CCOMP,cv2.CHAIN_APPROX_NONE)
 
   # sorted_contours = sorted(contours, key=lambda x:len(x), reverse=True)
-  
+  # cnt = sorted_contours[0]
+  # cv2.drawContours(im,[cnt],0,(0,255,0),3)
 
-  # cv2.drawContours(im,contours,-1,(0,255,0),3)
-
-  show_img(im, 0.5)
+  #cv2.drawContours(im,contours,-1,(0,255,0),3)
+  #show_img(im, 0.5)
   # k = cv2.waitKey(0)
   # if k == ord('h'):
   #   print cnt
@@ -80,9 +89,8 @@ def contour_detect(file):
   #   cv2.destroyAllWindows()
   #   sys.exit(0)
 
-
 if __name__ == '__main__':
   path_to_images = "sample_images/highmount/"
   files = os.listdir(path_to_images)
   for file in files:
-    basic_detect(path_to_images + file)
+    contour_detect(path_to_images + file)
