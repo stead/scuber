@@ -36,7 +36,10 @@ class Controller(object):
         self._last_error = current_error
 
         # translate heading and speed to motor outputs
-        output_l, output_r = self.ConvertSpeedAndHeadingToMotorOutput(target_heading, target_speed)
+        if target_speed != 0:
+            output_l, output_r = self.ConvertSpeedAndHeadingToMotorOutput(target_heading, target_speed)
+        else:
+            output_l, output_r = 0.0, 0.0
 
         self.output_to_motor(output_l, output_r)
 
