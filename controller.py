@@ -33,7 +33,7 @@ class Controller(object):
         print "\n".join(self._conn.readall())
 
     def update_controller(self, speed_heading, resetIDTerm=False):
-        current_error, target_speed  = speed_heading
+        target_speed, current_error  = speed_heading
 
         # Heading PID
         current_timestamp = float(time.clock())
@@ -79,4 +79,4 @@ class Controller(object):
             print("output_l: %f\t output_r: %f" % (output_l, output_r))
             print("")
 
-        return (output_l, output_r)
+        self.output_to_motor(output_l, output_r)
