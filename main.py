@@ -63,13 +63,15 @@ def get_line_error(im):
 
   ### contour detection
   contours, _ = cv2.findContours(canny,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
-  sorted_contours = sorted(contours, key=lambda x:cv2.arcLength(x,False), reverse=True)
 
-  # longest contour
-  cnt = sorted_contours[0]
-  cv2.drawContours(im,[cnt],-1,(0,255,0),3) # draw longest contour
+  if len(contours) < 1:
+    return None
+
+  sorted_contours = sorted(contours, key=lambda x:cv2.arcLength(x,False), reverse=True)
   
   ## JUST FOR TESTING
+  # longest contours
+  cv2.drawContours(im,sorted_contours[0:2],-1,(0,255,0),3) # draw longest contour  
   cv2.imshow('lines',im)
   k = cv2.waitKey(5)
   if k == 27:           
@@ -77,16 +79,31 @@ def get_line_error(im):
     return None
 
   ### Find x coordinates of endpoints
-  # get points for the single, longest contour
   if len(sorted_contours) == 0:
     print "No contours found, skipping"
     return None
 
+  # get points for the longest contours 
   mask = numpy.zeros(im.shape,numpy.uint8)
-  cv2.drawContours(mask,[cnt],0,255,-1)
+  cv2.drawContours(mask,[sorted_contours[0]],0,255,-1)
   pixelpoints = numpy.transpose(numpy.nonzero(mask)) 
-  xTop = pixelpoints[0][1] # IMPORTANT: pixelpoints is returned in row, column format
-  xBottom = pixelpoints[-1][1] ## IMPORTANT TODO: assumes points are returned sorted, need to verify
+  xTop_one = pixelpoints[0][1] # IMPORTANT: pixelpoints is returned in row, column format
+  xBottom_one = pixelpoints[-1][1] ## IMPORTANT TODO: assumes points are returned sorted, need to verify
+
+  if len(sorted_contours) > 1: # we have more than one contour
+    mask = numpy.zeros(im.shape,numpy.uint8)
+    cv2.drawContours(mask,[sorted_contours[1]],0,255,-1)
+    pixelpoints = numpy.transpose(numpy.nonzero(mask)) 
+    xTop_two = pixelpoints[0][1] # IMPORTANT: pixelpoints is returned in row, column format
+    xBottom_two = pixelpoints[-1][1] ## IMPORTANT TODO: assumes points are returned sorted, need to verify
+
+  # average two longest contours if available    
+  if len(sorted_contours) > 1:
+    xTop = xTop_one
+    xBottom = xBottom_one
+  else:
+    xTop = (xTop_one + xTop_two) / 2
+    xBottom = (xBottom_one + xBottom_two) / 2
 
   ### Calculate offset to return
   ### (XTop - XBottom) + (XTop - CENTER)
@@ -110,7 +127,7 @@ def get_line_error(im):
       print "Warning: scaled_error value less than -1.0: " + scaled_error    
     return max(scaled_error, -1.0)
 
-STOP = (0, None) # Speed first, then line error
+STOP = (0, 0) # Speed first, then line error
 def compute_speed_and_line_error(current_frame, scanner, code):
   """Given a frame from the camera, figure out the desired speed and current line error"""  
   next_direction = get_next_direction(current_frame, scanner, code)
@@ -124,7 +141,7 @@ def compute_speed_and_line_error(current_frame, scanner, code):
   return (2, line_error)
 
 def communicate_to_actuation(kontroller, speed_heading):
-  kontroller.update_controller(speed_heading)
+  kontroller.update_controller(speed_heading, True)
 
 def open_appropriate_camera():
   # Super basic right now, assumes that there are at most two cameras available

@@ -2,12 +2,12 @@ import comms
 import time
 
 # constants
-K_P = 0.5
+K_P = 1.0
 K_I = K_P / 3.0
 K_D = 0.0
 
-K_HEADING = 1.0
-K_SPEED = 0.1
+K_HEADING = 3.0
+K_SPEED = 0.4
 LATERAL_OFFSET = -29
 
 class Controller(object):
@@ -18,7 +18,7 @@ class Controller(object):
         self._controller_debug = True
         self._conn = comms.Connection()
         self._write("import board; board.run()")
-        self._write("c 30 40")
+        self._write("c 30 50")
 
     def output_to_motor(self, percent_l, percent_r):
         left_int = min(int(percent_l * 100.0), 100)
@@ -42,6 +42,14 @@ class Controller(object):
         self._integrated_error = self._integrated_error + delta_t * current_error
         delta_error = (current_error - self._last_error) / delta_t
         target_heading = K_P * current_error + K_I * self._integrated_error + K_D * delta_error
+
+        K_P_Percent = 0
+        K_I_Percent = 0
+        K_D_Percent = 0
+        if target_heading != 0:
+        	K_P_Percent = (K_P * current_error) / target_heading
+        	K_I_Percent = (K_I * self._integrated_error) / target_heading
+        	K_D_Percent = (K_D * delta_error) / target_heading
         
         # safety check to avoid I-term/D-term windup
         if (delta_t > 1.0):
@@ -52,7 +60,7 @@ class Controller(object):
         
         if (self._controller_debug):
             print "lineOffset= %.3f, TargetHeading= %.3f" % (current_error, target_heading)
-            print "P%%= %.2f, I%%= %.2f, D%%= %.2f, " % ((K_P*current_error / target_heading), (K_I*self._integrated_error / target_heading), (K_D*delta_error / target_heading))
+            print "P%%= %.2f, I%%= %.2f, D%%= %.2f, " % (K_P_Percent, K_I_Percent, K_D_Percent)
 
         # update values for next loop iteration
         self._last_timestamp = current_timestamp
@@ -69,11 +77,13 @@ class Controller(object):
             heading_sign = 1.0
             if target_heading < 0:
                 heading_sign = -1.0
-            # limit heading_correction_factor to 1/2 base output
-            heading_correction_factor = heading_sign * min(heading_correction_factor, output_r/2.0)
 
-            output_r = output_r - heading_correction_factor
-            output_l = output_l + heading_correction_factor
+            heading_correction_factor = heading_sign * heading_correction_factor
+
+            output_r = max(min(1.0, output_r - heading_correction_factor), 0)
+            output_l = max(min(1.0, output_l + heading_correction_factor), 0)
+
+
 
         if (self._controller_debug):
             print("output_l: %f\t output_r: %f" % (output_l, output_r))
