@@ -64,7 +64,10 @@ def get_line_error(im):
   ### contour detection
   contours, _ = cv2.findContours(canny,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
   sorted_contours = sorted(contours, key=lambda x:cv2.arcLength(x,False), reverse=True)
-  cv2.drawContours(im,sorted_contours[0:1],-1,(0,255,0),3) # draw longest contour
+
+  # longest contour
+  cnt = sorted_contours[0]
+  cv2.drawContours(im,[cnt],-1,(0,255,0),3) # draw longest contour
   
   ## JUST FOR TESTING
   cv2.imshow('lines',im)
@@ -79,12 +82,11 @@ def get_line_error(im):
     print "No contours found, skipping"
     return None
 
-  cnt = sorted_contours[0]
   mask = numpy.zeros(im.shape,numpy.uint8)
   cv2.drawContours(mask,[cnt],0,255,-1)
   pixelpoints = numpy.transpose(numpy.nonzero(mask)) 
   xTop = pixelpoints[0][1] # IMPORTANT: pixelpoints is returned in row, column format
-  xBottom = pixelpoints[-1][1]
+  xBottom = pixelpoints[-1][1] ## IMPORTANT TODO: assumes points are returned sorted, need to verify
 
   ### Calculate offset to return
   ### (XTop - XBottom) + (XTop - CENTER)
