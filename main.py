@@ -18,7 +18,7 @@ def find_subarray(mylist):
   else:
     return None
 
-def get_next_direction(current_frame, scanner):
+def get_next_direction(current_frame, scanner, code):
   cv2.imwrite('/tmp/tempFrame.png', current_frame)
   pil_image = Image.open('/tmp/tempFrame.png').convert('L')
 
@@ -32,12 +32,14 @@ def get_next_direction(current_frame, scanner):
   scanResult = scanner.scan(image)
 
   if scanResult:
-    # TODO: Still have to configure specific QR codes and check that we only stop
-    # when we see the correct one
-    return 'STOP'
+    for symbol in image:
+      # do something useful with results
+      print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
+      if symbol.data == code:
+        return 'STOP'
 
   # if QR code found, and QR code text is the desired destination, return stop
-  return 'STRAIGHT' # Can be one of STRAIGHT, STOP, LEFT, RIGHT. Right now only STRAIGHT or STOP.
+  return 'STRAIGHT' # Can be one of STRAIGHT, STOP.
 
 def get_line_offset(im):
   ### Crop the picture
@@ -75,8 +77,8 @@ def get_line_offset(im):
   return xTop - xBottom + xTop - len(im[0])/2
 
 STOP = (0, 0) # Speed first, then heading
-def compute_speed_and_heading(current_frame, scanner):
-  next_direction = get_next_direction(current_frame, scanner)
+def compute_speed_and_heading(current_frame, scanner, code):
+  next_direction = get_next_direction(current_frame, scanner, code)
   if next_direction == 'STOP':
     return STOP
 
@@ -88,12 +90,49 @@ def compute_speed_and_heading(current_frame, scanner):
 def communicate_to_actuation(speed_heading):
   print speed_heading
 
-if __name__ == '__main__':
-  camera = cv2.VideoCapture(0)
-  scanner = zbar.ImageScanner()
-  scanner.parse_config('enable')
+def open_appropriate_camera():
+  # Super basic right now, assumes that there are at most two cameras available
+  camera_heights = {} # Map from height of picture to camera #
+  for cam_num in [0, 1]:
+    height = get_camera_height(cam_num)
+    if height is not None:
+      camera_heights[height] = cam_num
+
+  cam_num_to_open = camera_heights.get(1080)
+  if cam_num_to_open is None:
+    if len(camera_heights) == 0:
+      return None
+    else:
+      cam_num_to_open = camera_heights.values()[0]
+
+  camera = cv2.VideoCapture(cam_num_to_open)
+  return camera
+
+def get_camera_height(camera_num):
   try:
+    camera = cv2.VideoCapture(camera_num)
+    success, frame = camera.read()
+    if success:
+      return len(frame)
+    else:
+      return None
+  finally:
+    try:
+      camera.release()
+    except:
+      pass
+
+def travel_to_qr_code(code):
+  camera = open_appropriate_camera()
+  if camera is None:
+    print "Could not initialize camera, not doing anything"
+    return
+
+  try:
+    scanner = zbar.ImageScanner()
+    scanner.parse_config('enable')
     num_failed_reads = 0
+
     while True:
       if num_failed_reads == FAILED_READS_THRESHOLD:
         print "Missed %d frames, stopping scooter" % (FAILED_READS_THRESHOLD,)
@@ -101,10 +140,10 @@ if __name__ == '__main__':
         break
 
       success, current_frame = camera.read()
-      cv2.imshow("Wutup", cv2.resize(current_frame, (0,0), fx=0.5, fy=0.5))
+      cv2.imshow("Scuber", cv2.resize(current_frame, (0,0), fx=0.5, fy=0.5))
       cv2.waitKey(10)
       if success:
-        speed_heading = compute_speed_and_heading(current_frame, scanner)
+        speed_heading = compute_speed_and_heading(current_frame, scanner, code)
         if speed_heading is not None:
           num_failed_reads = 0
           communicate_to_actuation(speed_heading)
@@ -118,3 +157,6 @@ if __name__ == '__main__':
         num_failed_reads += 1
   finally:
     camera.release()
+
+if __name__ == '__main__':
+  travel_to_qr_code("Scuber!")
