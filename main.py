@@ -8,6 +8,8 @@ from PIL import Image
 
 BW_THRESHOLD = 110
 FAILED_READS_THRESHOLD = 30
+CENTER_OFFSET = 29
+CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
 
 def find_subarray(mylist):
   # Group the list and look for the longest run of zeros.
@@ -19,8 +21,14 @@ def find_subarray(mylist):
     return None
 
 def get_next_direction(current_frame, scanner, code):
-  cv2.imwrite('/tmp/tempFrame.png', current_frame)
-  pil_image = Image.open('/tmp/tempFrame.png').convert('L')
+  ### thresholding. susceptible to glare, solve with masking tape?
+  thresh = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
+  success, thresh = cv2.threshold(thresh, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
+  if not success:
+    print "Could not threshold frame, skipping."
+    return 'STRAIGHT'
+
+  pil_image = Image.fromarray(thresh, 'L')
 
   width, height = pil_image.size
   raw = pil_image.tostring()
@@ -41,11 +49,11 @@ def get_next_direction(current_frame, scanner, code):
   # if QR code found, and QR code text is the desired destination, return stop
   return 'STRAIGHT' # Can be one of STRAIGHT, STOP.
 
-def get_line_offset(im):
+def get_line_error(im):
   ### Crop the picture
   height = len(im)
   width = len(im[0])
-  im = im[height/4:-height/4, width/4:-width/4]
+  im = im[height/CROP_RATIO:-height/CROP_RATIO, width/CROP_RATIO:-width/CROP_RATIO]
 
   ### thresholding. susceptible to glare, solve with masking tape?
   thresh = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
@@ -60,13 +68,20 @@ def get_line_offset(im):
   ### contour detection
   contours, _ = cv2.findContours(canny,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_NONE)
   sorted_contours = sorted(contours, key=lambda x:cv2.arcLength(x,False), reverse=True)
-  # cv2.drawContours(im,sorted_contours[0:1],-1,(0,255,0),3) # draw longest contour
+  cv2.drawContours(im,sorted_contours[0:1],-1,(0,255,0),3) # draw longest contour
+  
+  ## JUST FOR TESTING
+  cv2.imshow('lines',im)
+  k = cv2.waitKey(5)
+  if k == 27:           
+    cv2.destroyAllWindows()
+    return None
 
   ### Find x coordinates of endpoints
   # get points for the single, longest contour
   if len(sorted_contours) == 0:
     print "No contours found, skipping"
-    return
+    return None
 
   cnt = sorted_contours[0]
   mask = numpy.zeros(im.shape,numpy.uint8)
@@ -74,7 +89,22 @@ def get_line_offset(im):
   pixelpoints = numpy.transpose(numpy.nonzero(mask)) 
   xTop = pixelpoints[0][1] # IMPORTANT: pixelpoints is returned in row, column format
   xBottom = pixelpoints[-1][1]
-  return xTop - xBottom + xTop - len(im[0])/2
+
+  ### Calculate offset to return
+  ### (XTop - XBottom) + (XTop - CENTER)
+  ### CENTER = TRUE_CENTER - CENTER_OFFSET
+  MOST_POSITIVE_VAL = 3*len(im[0])/2 + CENTER_OFFSET
+  MOST_NEGATIVE_VAL = -3*len(im[0])/2 + CENTER_OFFSET
+  adjusted_midpoint = len(im[0])/2 - CENTER_OFFSET
+
+  unscaled_error = xTop - xBottom + xTop - adjusted_midpoint
+  if unscaled_error == 0:
+    return 0.0
+
+  if unscaled_error > 0:
+    return float(unscaled_error)/MOST_POSITIVE_VAL
+  else:
+    return float(unscaled_error)/abs(MOST_NEGATIVE_VAL)
 
 STOP = (0, 0) # Speed first, then heading
 def compute_speed_and_heading(current_frame, scanner, code):
@@ -82,10 +112,10 @@ def compute_speed_and_heading(current_frame, scanner, code):
   if next_direction == 'STOP':
     return STOP
 
-  line_offset = get_line_offset(current_frame)
-  if line_offset is None:
+  line_error = get_line_error(current_frame)
+  if line_error is None:
     return None
-  return (2, line_offset)
+  return (2, line_error)
 
 def communicate_to_actuation(speed_heading):
   print speed_heading
@@ -140,8 +170,8 @@ def travel_to_qr_code(code):
         break
 
       success, current_frame = camera.read()
-      cv2.imshow("Scuber", cv2.resize(current_frame, (0,0), fx=0.5, fy=0.5))
-      cv2.waitKey(10)
+      # cv2.imshow("Scuber", cv2.resize(current_frame, (0,0), fx=0.5, fy=0.5))
+      # cv2.waitKey(10)
       if success:
         speed_heading = compute_speed_and_heading(current_frame, scanner, code)
         if speed_heading is not None:
