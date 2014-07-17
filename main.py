@@ -12,16 +12,8 @@ FAILED_READS_THRESHOLD = 30
 CENTER_OFFSET = 29
 CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
 
-def find_subarray(mylist):
-  # Group the list and look for the longest run of zeros.
-  longest_array_of_zeros = max(sum(1 for _ in l if n == 0) for n, l in itertools.groupby(mylist))
-  if longest_array_of_zeros > 0:
-    line_pattern = numpy.array([numpy.uint8(0)] * longest_array_of_zeros).tostring()
-    return (mylist.tostring().index(line_pattern), longest_array_of_zeros)
-  else:
-    return None
-
 def get_next_direction(current_frame, scanner, code):
+  """Given a frame from the camera and a destination, figure out which direction to take next"""
   ### thresholding. susceptible to glare, solve with masking tape?
   thresh = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
   success, thresh = cv2.threshold(thresh, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
@@ -53,6 +45,7 @@ def get_next_direction(current_frame, scanner, code):
   return 'STRAIGHT' # Can be one of STRAIGHT, STOP.
 
 def get_line_error(im):
+  """Given a frame from the camera, figure out the line error"""  
   ### Crop the picture
   height = len(im)
   width = len(im[0])
@@ -105,12 +98,19 @@ def get_line_error(im):
     return 0.0
 
   if unscaled_error > 0:
-    return float(unscaled_error)/MOST_POSITIVE_VAL
+    scaled_error = float(unscaled_error)/MOST_POSITIVE_VAL
+    if abs(scaled_error) > 1.0:
+      print "Warning: scaled_error value greater than 1.0: " + scaled_error
+    return min(scaled_error, 1.0)
   else:
-    return float(unscaled_error)/abs(MOST_NEGATIVE_VAL)
+    scaled_error = float(unscaled_error)/abs(MOST_NEGATIVE_VAL)
+    if abs(scaled_error) > 1.0:
+      print "Warning: scaled_error value less than -1.0: " + scaled_error    
+    return max(scaled_error, -1.0)
 
-STOP = (0, 0) # Speed first, then heading
-def compute_speed_and_heading(current_frame, scanner, code):
+STOP = (0, None) # Speed first, then line error
+def compute_speed_and_line_error(current_frame, scanner, code):
+  """Given a frame from the camera, figure out the desired speed and current line error"""  
   next_direction = get_next_direction(current_frame, scanner, code)
   if next_direction == 'STOP':
     return STOP
@@ -177,14 +177,14 @@ def travel_to_qr_code(kontroller, code):
       # cv2.imshow("Scuber", cv2.resize(current_frame, (0,0), fx=0.5, fy=0.5))
       # cv2.waitKey(10)
       if success:
-        speed_heading = compute_speed_and_heading(current_frame, scanner, code)
-        if speed_heading is not None:
+        speed_and_line_error = compute_speed_and_line_error(current_frame, scanner, code)
+        if speed_and_line_error is not None:
           num_failed_reads = 0
-          communicate_to_actuation(kontroller, speed_heading)
-          if speed_heading[0] == 0:
+          communicate_to_actuation(kontroller, speed_and_line_error)
+          if speed_and_line_error[0] == 0:
             break
         else:
-          print "Couldn't compute speed and heading, passing"
+          print "Couldn't compute speed and line error, passing"
           num_failed_reads += 1
       else:
         print "Couldn't read frame successfully, passing"
