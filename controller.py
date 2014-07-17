@@ -1,83 +1,63 @@
 import time
 
-def GetTestLateralOffset():
-    return -29
-
-def OutputToMotor(percentL, percentR):
-    print "LOut = %d\tROut=%d" % (percentL, percentR)
-
 # constants
-Kp = 0.5
-Ki = 0.0
-Kd = 0.0
+K_P = 0.5
+K_I = 0.0
+K_D = 0.0
 
-kHeading = 1.0
-kSpeed = 0.1
+K_HEADING = 1.0
+K_SPEED = 0.1
+LATERAL_OFFSET = -29
 
-integratedError = 0
-lastTimestamp = float(time.clock())
-lastError = 0
+class Controller(object):
+    def __init__(self):
+        self._integrated_error = 0
+        self._last_timestamp = float(time.clock())
+        self._last_error = 0
 
-def StartController():
-    global integratedError
-    global lastTimestamp
-    global lastError
+    # TODO: Communicate to motor here
+    def output_to_motor(percentL, percentR):
+        print "LOut = %d\tROut=%d" % (percentL, percentR)
 
-    integratedError = 0
-    lastTimestamp = float(time.clock())
-    lastError = 0
+    def update_controller(speed_heading):
+        target_speed, current_error = speed_heading
 
-def UpdateController(i):
-    global integratedError
-    global lastTimestamp
-    global lastError
+        # Heading PID
+        current_timestamp = float(time.clock())
+        delta_t = current_timestamp - self._last_timestamp
 
-    # Heading PID
-    #currentError = GetTestLateralOffset()
-    currentError = i
-    currentTimestamp = float(time.clock())
-    deltaT = currentTimestamp - lastTimestamp
+        self._integrated_error = self._integrated_error + delta_t * current_error
+        delta_error = (current_error - self._last_error) / delta_t
+        target_heading = K_P * current_error + K_I * self._integrated_error + K_D * delta_error
+        print "TargetHeading= %f" % target_heading
 
-    integratedError = integratedError + deltaT*currentError
-    deltaError = (currentError - lastError) / deltaT
-    targetHeading = Kp*currentError + Ki*integratedError + Kd*deltaError
-    print "TargetHeading= %f" % targetHeading
+        # update values for next loop iteration
+        self._last_timestamp = current_timestamp
+        self._last_error = current_error
 
-    # update values for next loop iteration
-    lastTimestamp = currentTimestamp
-    lastError = currentError
+        # translate heading and speed to motor outputs
+        output_r, output_l = ConvertSpeedAndHeadingToMotorOutput(target_heading, target_speed)
 
-    # determine desired Speed
-    #speed = constant # Or slow down when approaching intersections
-    targetSpeed = 2.0 # ft/s
+        output_to_motor(output_l, output_r)
 
-    # translate heading and speed to motor outputs
-    outputR, outputL = ConvertHeadingAndSpeedToMotorOutput(targetHeading, targetSpeed)
+    def ConvertSpeedAndHeadingToMotorOutput(target_speed, target_heading):
+        # solve system:
+        # output_r - output_l = target_heading * K_HEADING / target_speed
+        # output_r + output_l = target_speed * K_SPEED
 
-def ConvertSpeedAndHeadingToMotorOutput(targetSpeed, targetHeading):
-    # solve system:
-    # outputR - outputL = targetHeading * kHeading / targetSpeed
-    # outputR + outputL = targetSpeed * kSpeed
+        output_r = K_SPEED * target_speed
+        output_l = K_SPEED * target_speed
 
-    outputR = kSpeed * targetSpeed
-    outputL = kSpeed * targetSpeed
+        heading_correction_factor = abs(target_heading * K_HEADING / target_speed)
+        heading_sign = 1.0
+        if target_heading < 0:
+            heading_sign = -1.0
+        # limit heading_correction_factor to 1/2 base output
+        heading_correction_factor = heading_sign * min(heading_correction_factor, output_r/2.0)
 
-    headingCorrectionFactor = abs(targetHeading * kHeading / targetSpeed)
-    headingSign = 1.0
-    if targetHeading < 0:
-        headingSign = -1.0
-    # limit headingCorrection to 1/2 base output
-    headingCorrectionFactor = headingSign * min(headingCorrectionFactor, outputR/2.0)
+        output_r = output_r - heading_correction_factor
+        output_l = output_l + heading_correction_factor
 
-    #print("base output: %f\t heading correct: %f" % (outputR, headingCorrectionFactor))
+        print("output_r: %f\t output_l: %f" % (output_r, output_l))
 
-    outputR = outputR - headingCorrectionFactor
-    outputL = outputL + headingCorrectionFactor
-
-    print("outputR: %f\t outputL: %f" % (outputR, outputL))
-
-    # check bounds
-    #outputR = min(max(0,outputR), 1)
-    #outputL = min(max(0,outputL), 1)
-
-    return (outputR, outputL)
+        return (output_r, output_l)
