@@ -1,3 +1,4 @@
+import comms
 import time
 
 # constants
@@ -15,10 +16,21 @@ class Controller(object):
         self._last_timestamp = float(time.clock())
         self._last_error = 0
         self._controller_debug = True
+        self._conn = comms.Connection()
+        self._write("import board; board.run()")
+        self._write("c 30 40")
 
-    # TODO: Communicate to motor here
     def output_to_motor(self, percent_l, percent_r):
-        print "LOut = %d\tROut=%d" % (percent_l, percent_r)
+        left_int = min(int(percent_l * 100.0), 100)
+        right_int = min(int(percent_r * 100.0), 100)
+        self._write("m %d %d" % (left_int, right_int,))
+
+    def close(self):
+        self._conn.close()
+
+    def _write(self, stmt):
+        self._conn.writeline(stmt)
+        print "\n".join(self._conn.readall())
 
     def update_controller(self, speed_heading, resetIDTerm=False):
         current_error, target_speed  = speed_heading
@@ -66,5 +78,5 @@ class Controller(object):
         if (self._controller_debug):
             print("output_l: %f\t output_r: %f" % (output_l, output_r))
             print("")
-			
+
         return (output_l, output_r)
