@@ -1,7 +1,7 @@
 import time
 
 def GetTestLateralOffset():
-	return -30
+	return -29
 
 def OutputToMotor(percentL, percentR):
 	print "LOut = %d\tROut=%d" % (percentL, percentR)
