@@ -26,6 +26,8 @@ def get_next_direction(current_frame, scanner, code):
   success, thresh = cv2.threshold(thresh, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
   if not success:
     print "Could not threshold frame, skipping."
+    # Okay to return 'STRAIGHT' here because the thresholding error will cause the
+    # speed calculator to bail out and we'll skip the frame.
     return 'STRAIGHT'
 
   pil_image = Image.fromarray(thresh, 'L')
@@ -115,6 +117,7 @@ def compute_speed_and_heading(current_frame, scanner, code):
   line_error = get_line_error(current_frame)
   if line_error is None:
     return None
+
   return (2, line_error)
 
 def communicate_to_actuation(speed_heading):
