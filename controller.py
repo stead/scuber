@@ -16,10 +16,10 @@ class Controller(object):
         self._last_error = 0
 
     # TODO: Communicate to motor here
-    def output_to_motor(percentL, percentR):
-        print "LOut = %d\tROut=%d" % (percentL, percentR)
+    def output_to_motor(self, percent_l, percent_r):
+        print "LOut = %d\tROut=%d" % (percent_l, percent_r)
 
-    def update_controller(speed_heading):
+    def update_controller(self, speed_heading):
         target_speed, current_error = speed_heading
 
         # Heading PID
@@ -36,11 +36,11 @@ class Controller(object):
         self._last_error = current_error
 
         # translate heading and speed to motor outputs
-        output_r, output_l = ConvertSpeedAndHeadingToMotorOutput(target_heading, target_speed)
+        output_l, output_r = self.ConvertSpeedAndHeadingToMotorOutput(target_heading, target_speed)
 
-        output_to_motor(output_l, output_r)
+        self.output_to_motor(output_l, output_r)
 
-    def ConvertSpeedAndHeadingToMotorOutput(target_speed, target_heading):
+    def ConvertSpeedAndHeadingToMotorOutput(self, target_speed, target_heading):
         # solve system:
         # output_r - output_l = target_heading * K_HEADING / target_speed
         # output_r + output_l = target_speed * K_SPEED
@@ -58,6 +58,6 @@ class Controller(object):
         output_r = output_r - heading_correction_factor
         output_l = output_l + heading_correction_factor
 
-        print("output_r: %f\t output_l: %f" % (output_r, output_l))
+        print("output_l: %f\t output_r: %f" % (output_l, output_r))
 
-        return (output_r, output_l)
+        return (output_l, output_r)

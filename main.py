@@ -1,3 +1,4 @@
+import controller
 import cv2
 import itertools
 import numpy
@@ -120,8 +121,8 @@ def compute_speed_and_heading(current_frame, scanner, code):
 
   return (2, line_error)
 
-def communicate_to_actuation(speed_heading):
-  print speed_heading
+def communicate_to_actuation(kontroller, speed_heading):
+  kontroller.update_controller(speed_heading)
 
 def open_appropriate_camera():
   # Super basic right now, assumes that there are at most two cameras available
@@ -155,7 +156,7 @@ def get_camera_height(camera_num):
     except:
       pass
 
-def travel_to_qr_code(code):
+def travel_to_qr_code(kontroller, code):
   camera = open_appropriate_camera()
   if camera is None:
     print "Could not initialize camera, not doing anything"
@@ -169,7 +170,7 @@ def travel_to_qr_code(code):
     while True:
       if num_failed_reads == FAILED_READS_THRESHOLD:
         print "Missed %d frames, stopping scooter" % (FAILED_READS_THRESHOLD,)
-        communicate_to_actuation(STOP)
+        communicate_to_actuation(kontroller, STOP)
         break
 
       success, current_frame = camera.read()
@@ -179,7 +180,7 @@ def travel_to_qr_code(code):
         speed_heading = compute_speed_and_heading(current_frame, scanner, code)
         if speed_heading is not None:
           num_failed_reads = 0
-          communicate_to_actuation(speed_heading)
+          communicate_to_actuation(kontroller, speed_heading)
           if speed_heading[0] == 0:
             break
         else:
@@ -192,4 +193,5 @@ def travel_to_qr_code(code):
     camera.release()
 
 if __name__ == '__main__':
-  travel_to_qr_code("Scuber!")
+  kontroller = controller.Controller()
+  travel_to_qr_code(kontroller, "Scuber!")
