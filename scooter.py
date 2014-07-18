@@ -1,8 +1,11 @@
 import controller
 import cv2
 import itertools
+import json
 import numpy
 import time
+import urllib
+import urllib2
 import zbar
 
 from PIL import Image
@@ -11,6 +14,8 @@ BW_THRESHOLD = 110
 FAILED_READS_THRESHOLD = 15
 CENTER_OFFSET = 29
 CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
+
+WEBSERVER_IP_ADDRESS = "54.191.68.125"
 
 def get_next_direction(current_frame, scanner, code):
   """Given a frame from the camera and a destination, figure out which direction to take next"""
@@ -38,11 +43,20 @@ def get_next_direction(current_frame, scanner, code):
     for symbol in image:
       # do something useful with results
       print 'decoded', symbol.type, 'symbol', '"%s"' % symbol.data
+      report_data_to_webserver(symbol.data)
       if symbol.data == code:
         return 'STOP'
 
   # if QR code found, and QR code text is the desired destination, return stop
   return 'STRAIGHT' # Can be one of STRAIGHT, STOP.
+
+def report_data_to_webserver(data):
+  url = 'http://%s:8080/report_code' % (WEBSERVER_IP_ADDRESS,)
+  values = {'code_data' : data}
+  data = urllib.urlencode(values)
+  req = urllib2.Request(url, data)
+  response = urllib2.urlopen(req)
+  print response.read()
 
 def get_line_error(im):
   """Given a frame from the camera, figure out the line error"""  
@@ -176,6 +190,9 @@ def get_camera_height(camera_num):
     except:
       pass
 
+def get_next_destination_from_webserver():
+  return json.loads(urllib2.urlopen("http://%s:8080/get_next_destination" % (WEBSERVER_IP_ADDRESS,)).read()).get("next_destination")
+
 def travel_to_qr_code(kontroller, code):
   camera = open_appropriate_camera()
   if camera is None:
@@ -218,11 +235,17 @@ class DummyController(object):
 
 if __name__ == '__main__':
   try:
-    # kontroller = DummyController()
     kontroller = controller.Controller()
-    travel_to_qr_code(kontroller, "Heart")
+
+    while True:
+      next_destination = get_next_destination_from_webserver()
+      if next_destination is None:
+        time.sleep(1)
+        continue
+      travel_to_qr_code(kontroller, next_destination)
   finally:
     try:
       communicate_to_actuation(kontroller, STOP)
+      kontroller.close()
     except:
       pass
