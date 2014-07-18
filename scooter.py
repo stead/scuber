@@ -51,10 +51,10 @@ def get_next_direction(current_frame, scanner, code):
   return 'STRAIGHT' # Can be one of STRAIGHT, STOP.
 
 def report_data_to_webserver(data):
-  url = 'http://%s:8080/report_code' % (WEBSERVER_IP_ADDRESS,)
+  url = 'http://%s:8080/report_code/%s' % (WEBSERVER_IP_ADDRESS, data,)
   values = {'code_data' : data}
-  data = urllib.urlencode(values)
-  req = urllib2.Request(url, data)
+  data_ = urllib.urlencode(values)
+  req = urllib2.Request(url, data_)
   response = urllib2.urlopen(req)
   print response.read()
 
