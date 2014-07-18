@@ -15,7 +15,7 @@ FAILED_READS_THRESHOLD = 15
 CENTER_OFFSET = 29
 CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
 
-WEBSERVER_IP_ADDRESS = "54.191.68.125"
+WEBSERVER_IP_ADDRESS = "127.0.0.1" # "54.191.68.125"
 
 def get_next_direction(current_frame, scanner, code):
   """Given a frame from the camera and a destination, figure out which direction to take next"""
@@ -52,10 +52,7 @@ def get_next_direction(current_frame, scanner, code):
 
 def report_data_to_webserver(data):
   url = 'http://%s:8080/report_code/%s' % (WEBSERVER_IP_ADDRESS, data,)
-  values = {'code_data' : data}
-  data_ = urllib.urlencode(values)
-  req = urllib2.Request(url, data_)
-  response = urllib2.urlopen(req)
+  response = urllib2.urlopen(url)
   print response.read()
 
 def get_line_error(im):
@@ -155,8 +152,8 @@ def compute_speed_and_line_error(current_frame, scanner, code):
 
   return (2, line_error)
 
-def communicate_to_actuation(kontroller, speed_heading):
-  kontroller.update_controller(speed_heading)
+def communicate_to_actuation(kontroller, speed_heading, just_slept):
+  kontroller.update_controller(speed_heading, resetIDTerm=just_slept)
 
 def open_appropriate_camera():
   # Super basic right now, assumes that there are at most two cameras available
@@ -199,6 +196,8 @@ def travel_to_qr_code(kontroller, code):
     print "Could not initialize camera, not doing anything"
     return
 
+  just_slept = True
+
   try:
     scanner = zbar.ImageScanner()
     scanner.parse_config('enable')
@@ -207,7 +206,7 @@ def travel_to_qr_code(kontroller, code):
     while True:
       if num_failed_reads == FAILED_READS_THRESHOLD:
         print "Missed %d frames, stopping scooter" % (FAILED_READS_THRESHOLD,)
-        communicate_to_actuation(kontroller, STOP)
+        communicate_to_actuation(kontroller, STOP, False) # just_slept doesn't matter if we are stopping
         break
 
       success, current_frame = camera.read()
@@ -217,7 +216,8 @@ def travel_to_qr_code(kontroller, code):
         speed_and_line_error = compute_speed_and_line_error(current_frame, scanner, code)
         if speed_and_line_error is not None:
           num_failed_reads = 0
-          communicate_to_actuation(kontroller, speed_and_line_error)
+          communicate_to_actuation(kontroller, speed_and_line_error, just_slept)
+          just_slept = False
           if speed_and_line_error[0] == 0:
             break
         else:
@@ -246,7 +246,7 @@ if __name__ == '__main__':
       travel_to_qr_code(kontroller, next_destination)
   finally:
     try:
-      communicate_to_actuation(kontroller, STOP)
+      communicate_to_actuation(kontroller, STOP, False)
       kontroller.close()
     except:
       pass
