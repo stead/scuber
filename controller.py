@@ -3,11 +3,11 @@ import time
 
 # constants
 K_P = 1.0
-K_I = K_P / 3.0
+K_I = -1 * K_P / 80.0
 K_D = 0.0
 
-K_HEADING = 3.0
-K_SPEED = 0.4
+K_HEADING = 4.0
+K_SPEED = 0.2
 LATERAL_OFFSET = -29
 
 class Controller(object):
@@ -18,7 +18,7 @@ class Controller(object):
         self._controller_debug = True
         self._conn = comms.Connection()
         self._write("import board; board.run()")
-        self._write("c 30 50")
+        self._write("c 30 60")
 
     def output_to_motor(self, percent_l, percent_r):
         left_int = min(int(percent_l * 100.0), 100)

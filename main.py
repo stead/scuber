@@ -8,7 +8,7 @@ import zbar
 from PIL import Image
 
 BW_THRESHOLD = 110
-FAILED_READS_THRESHOLD = 30
+FAILED_READS_THRESHOLD = 10
 CENTER_OFFSET = 29
 CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
 
@@ -98,7 +98,7 @@ def get_line_error(im):
     xBottom_two = pixelpoints[-1][1] ## IMPORTANT TODO: assumes points are returned sorted, need to verify
 
   # average two longest contours if available    
-  if len(sorted_contours) > 1:
+  if len(sorted_contours) == 1:
     xTop = xTop_one
     xBottom = xBottom_one
   else:
@@ -141,7 +141,7 @@ def compute_speed_and_line_error(current_frame, scanner, code):
   return (2, line_error)
 
 def communicate_to_actuation(kontroller, speed_heading):
-  kontroller.update_controller(speed_heading, True)
+  kontroller.update_controller(speed_heading)
 
 def open_appropriate_camera():
   # Super basic right now, assumes that there are at most two cameras available
@@ -212,5 +212,11 @@ def travel_to_qr_code(kontroller, code):
     camera.release()
 
 if __name__ == '__main__':
-  kontroller = controller.Controller()
-  travel_to_qr_code(kontroller, "Scuber!")
+  try:
+    kontroller = controller.Controller()
+    travel_to_qr_code(kontroller, "Scuber!")
+  finally:
+    try:
+      communicate_to_actuation(kontroller, STOP)
+    except:
+      pass
