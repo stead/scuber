@@ -242,6 +242,7 @@ if __name__ == '__main__':
       if next_destination is None:
         time.sleep(1)
         continue
+      print "Traveling to %s" % (next_destination,)
       travel_to_qr_code(kontroller, next_destination)
   finally:
     try:
