@@ -14,14 +14,14 @@ CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
 
 def get_next_direction(current_frame, scanner, code):
   """Given a frame from the camera and a destination, figure out which direction to take next"""
-  ### thresholding. susceptible to glare, solve with masking tape?
+  # ### thresholding. susceptible to glare, solve with masking tape?
   thresh = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
-  success, thresh = cv2.threshold(thresh, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
-  if not success:
-    print "Could not threshold frame, skipping."
-    # Okay to return 'STRAIGHT' here because the thresholding error will cause the
-    # speed calculator to bail out and we'll skip the frame.
-    return 'STRAIGHT'
+  # success, thresh = cv2.threshold(thresh, BW_THRESHOLD, 255, cv2.THRESH_BINARY)
+  # if not success:
+  #   print "Could not threshold frame, skipping."
+  #   # Okay to return 'STRAIGHT' here because the thresholding error will cause the
+  #   # speed calculator to bail out and we'll skip the frame.
+  #   return 'STRAIGHT'
 
   pil_image = Image.fromarray(thresh, 'L')
 
@@ -211,8 +211,13 @@ def travel_to_qr_code(kontroller, code):
   finally:
     camera.release()
 
+class DummyController(object):
+  def update_controller(self, dummy):
+    pass
+
 if __name__ == '__main__':
   try:
+    # kontroller = DummyController()
     kontroller = controller.Controller()
     travel_to_qr_code(kontroller, "Scuber!")
   finally:
