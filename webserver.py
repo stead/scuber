@@ -24,7 +24,7 @@ def set_destination(conference_room_name):
         f = open(DESTINATION_PATH, 'w')
         f.write(conference_room_name)
         f.close()
-        return template('<b>Hi! Scuber dispatched to {{ conference_room_name }}</b>', conference_room_name=conference_room_name)
+        return template('<b>Hi! Scuber dispatched to {{ conference_room_name }}. Please note that 5X surge pricing is in effect.</b>', conference_room_name=conference_room_name)
 
 @route('/get_next_destination')
 def get_destination():
