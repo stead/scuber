@@ -18,7 +18,7 @@ def __readDestination():
 def set_destination(conference_room_name):
 	"""Used by client to set a new destination for the scooter, i.e. to request a dispatch"""
 	if os.path.exists(DESTINATION_PATH):
-        return template("Sorry, all Scubers are currently busy!")
+		return template("Sorry, all Scubers are currently busy!")
     else:		
 		f = open(DESTINATION_PATH, 'w')
 		f.write(conference_room_name)
