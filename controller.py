@@ -2,11 +2,11 @@ import comms
 import time
 
 # constants
-K_P = 1.0
-K_I = -1 * K_P / 80.0
-K_D = 0.0
+K_P = 1.0	
+K_I = .05
+K_D = 0.2
 
-K_HEADING = 4.0
+K_HEADING = 3.0
 K_SPEED = 0.2
 LATERAL_OFFSET = -29
 

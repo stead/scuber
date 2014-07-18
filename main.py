@@ -112,7 +112,8 @@ def get_line_error(im):
   MOST_NEGATIVE_VAL = -3*len(im[0])/2 + CENTER_OFFSET
   adjusted_midpoint = len(im[0])/2 - CENTER_OFFSET
 
-  unscaled_error = xTop - xBottom + xTop - adjusted_midpoint
+  #unscaled_error = xTop - xBottom + 2*(xTop - adjusted_midpoint)
+  unscaled_error = xTop - adjusted_midpoint
   if unscaled_error == 0:
     return 0.0
 
@@ -219,7 +220,7 @@ if __name__ == '__main__':
   try:
     # kontroller = DummyController()
     kontroller = controller.Controller()
-    travel_to_qr_code(kontroller, "Scuber!")
+    travel_to_qr_code(kontroller, "Heart")
   finally:
     try:
       communicate_to_actuation(kontroller, STOP)
