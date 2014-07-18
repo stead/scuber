@@ -16,7 +16,7 @@ FAILED_READS_THRESHOLD = 15
 CENTER_OFFSET = 29
 CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
 
-WEBSERVER_IP_ADDRESS = "127.0.0.1" # "54.191.68.125"
+WEBSERVER_IP_ADDRESS = "54.191.68.125"
 
 def get_next_direction(current_frame, scanner, code):
   """Given a frame from the camera and a destination, figure out which direction to take next"""
