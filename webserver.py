@@ -2,6 +2,11 @@ from bottle import route, run, template
 import os
 import os.path
 import json
+from bottle import static_file
+
+@route('/pages/<filename>')
+def server_static(filename):
+    return static_file(filename, root='pages')
 
 DESTINATION_PATH = "/tmp/destination.txt"
 CURRENT_LOCATION_PATH = "/tmp/current_location.txt"
@@ -15,16 +20,20 @@ def __readDestination():
         destination = None
     return destination
 
+@route('/')
+def get_home_page():
+  return open("pages/index.html").read()
+
 @route('/set_next_destination/<conference_room_name>')
 def set_destination(conference_room_name):
     """Used by client to set a new destination for the scooter, i.e. to request a dispatch"""
     if os.path.exists(DESTINATION_PATH):
-        return template("Sorry, all Scubers are currently busy!")
+        return open('pages/busy.html').read()
     else:
         f = open(DESTINATION_PATH, 'w')
         f.write(conference_room_name)
         f.close()
-        return template('<b>Hi! Scuber dispatched to {{ conference_room_name }}. Please note that 5X surge pricing is in effect.</b>', conference_room_name=conference_room_name)
+        return open('pages/dispatched.html').read()
 
 @route('/get_next_destination')
 def get_destination():

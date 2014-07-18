@@ -1,0 +1,89 @@
+<html>
+  <head>
+	<!-- Bootstrap -->
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+
+    <style type='text/css'>
+      body {
+      	margin: 0;
+      	padding: 0;
+      	background: #000;
+      }
+      .header {
+      	margin-top: 60px;
+      	padding: 20px;
+      }
+      .logo {
+      	display: block;
+      	margin: 20px auto;
+      	margin-bottom: 80px;      	
+        width:80%;
+        max-width: 400px;
+      }
+      .container {
+      	clear: both;
+      	margin: 20px auto;
+      }
+      .container h1 {
+		text-align: center;
+		color: #1fbad6;  	
+      }
+      .container p {
+      	color: #fff;
+      	font-size: 20px;
+      	text-align: center;
+      }
+      .uber-submit {
+      	background-color: #1fbad6;
+		border: 2px solid #1fbad6;
+		color: #fff;
+		border-radius: 0;
+		height: 60px;
+      }
+      .uber-submit, .conf-select {
+		margin: 20px auto;
+		display: block;
+		width: 100%;
+        max-width: 500px;		
+      }
+      </style>
+      <title>Scuber</title>
+  </head>
+
+<body>
+	<div class="header navbar-fixed-top">
+      <img class="logo" src='/pages/scuber.png'/>
+      <div style="clear: both;"/>
+	</div>
+
+	<div class="container">
+		<h1>Where are you?</h1>
+		<form role="form" onsubmit="submitToAppropriateUrl()">
+			<select id="destination" class="conf-select form-control input-lg">
+			  <option></option>
+			  <option value="Check">Check</option>
+			  <option value="Heart">Heart</option>
+			  <option value="Nitro">Nitro</option>
+			  <option value="Sync">Sync</option>
+			  <option value="Turbo">Turbo</option>
+			</select>
+  			<button type="submit" class="uber-submit btn-lg">Submit</button>
+		</form>
+		<br><br><br>
+		<p> Don't see your room? We're expanding to a conference room near you soon!</p>
+	</div>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <script type="text/javascript">
+    function submitToAppropriateUrl(evt) {
+    	var targetUrl = "/set_next_destination/" + $('#destination').val();
+    	window.open(targetUrl);
+    }
+    </script>
+
+</body>
+</html>
