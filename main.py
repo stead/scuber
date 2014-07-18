@@ -8,7 +8,7 @@ import zbar
 from PIL import Image
 
 BW_THRESHOLD = 110
-FAILED_READS_THRESHOLD = 10
+FAILED_READS_THRESHOLD = 15
 CENTER_OFFSET = 29
 CROP_RATIO = 4 ## TAKES 1/4 ooff each side of image
 
