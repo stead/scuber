@@ -10,6 +10,7 @@ import zbar
 
 from PIL import Image
 
+DEBUG_MODE = True
 BW_THRESHOLD = 110
 FAILED_READS_THRESHOLD = 15
 CENTER_OFFSET = 29
@@ -82,12 +83,13 @@ def get_line_error(im):
   
   ## JUST FOR TESTING
   # longest contours
-  cv2.drawContours(im,sorted_contours[0:2],-1,(0,255,0),3) # draw longest contour  
-  cv2.imshow('lines',im)
-  k = cv2.waitKey(5)
-  if k == 27:           
-    cv2.destroyAllWindows()
-    return None
+  if DEBUG_MODE:
+    cv2.drawContours(im,sorted_contours[0:2],-1,(0,255,0),3) # draw longest contour  
+    cv2.imshow('lines',im)
+    k = cv2.waitKey(5)
+    if k == 27:           
+      cv2.destroyAllWindows()
+      return None
 
   ### Find x coordinates of endpoints
   if len(sorted_contours) == 0:
