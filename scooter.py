@@ -209,7 +209,8 @@ def travel_to_qr_code(kontroller, code):
       if num_failed_reads == FAILED_READS_THRESHOLD:
         print "Missed %d frames, stopping scooter" % (FAILED_READS_THRESHOLD,)
         communicate_to_actuation(kontroller, STOP, False) # just_slept doesn't matter if we are stopping
-        break
+        raise Exception("Went off track, stopping")
+        break # Don't think this is necessary
 
       success, current_frame = camera.read()
       # cv2.imshow("Scuber", cv2.resize(current_frame, (0,0), fx=0.5, fy=0.5))
